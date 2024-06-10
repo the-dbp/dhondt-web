@@ -1,6 +1,6 @@
 from dhondt import Group
 
-TOTAL_VOTES = 5_000_000
+TOTAL_VOTES = 2_447_749
 
 ep_valg = Group(name="EP Valg", mandates=15, parties=[
     Group(name="EEP", parties=[
