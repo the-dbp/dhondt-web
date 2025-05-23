@@ -28,7 +28,7 @@ class Group:
         if not self.parties:
             raise ValueError("No parties in group")
         if not self.mandates:
-            raise ValueError("No mandates to distribute")
+            print("No mandates to distribute")
 
         self.parties = dhondt(self.parties, self.mandates)
 
