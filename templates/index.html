@@ -2,14 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dhonsk Valg Input</title>
+  <title>Dhonsk Election Input</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .group, .party { margin: 10px; padding: 10px; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
-  <h1>Dhonsk Valg Input</h1>
+<p><strong>Privacy notice:</strong> Data is sent to the server for calculation. If you're concerned, <a href="https://github.com/the-dbp/dhondt-web" target="_blank">download and run this locally</a>.</p>
+  <h1>Dhonsk Election Input</h1>
   <form id="inputForm">
     <label>Total Votes: <input type="number" id="totalVotes" required></label><br>
     <label>Mandates: <input type="number" id="mandates" required></label><br>
@@ -100,9 +101,11 @@
     const partyDiv = button.closest(".party");
     partyDiv.remove();
   }
-
+const proceed = confirm("⚠️ Your input data will be sent to the server for calculation. If you have privacy concerns, please download the code from https://github.com/the-dbp/dhondt-web and run it locally.");
   document.getElementById("inputForm").addEventListener("submit", async function (e) {
     e.preventDefault();
+
+
     const totalVotes = parseInt(document.getElementById("totalVotes").value);
     const mandates = parseInt(document.getElementById("mandates").value);
 
