@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dhonsk Valg Input</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .group, .party { margin: 10px; padding: 10px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>Dhonsk Valg Input</h1>
+  <form id="inputForm">
+    <label>Total Votes: <input type="number" id="totalVotes" required></label><br>
+    <label>Mandates: <input type="number" id="mandates" required></label><br>
+    <div id="groupsContainer"></div>
+    <button type="button" onclick="addGroup()">Add Group</button><br><br>
+    <button type="submit">Calculate</button>
+  </form>
+
+  <h2>Results</h2>
+  <canvas id="chart" width="800" height="400"></canvas>
+  <table border="1" id="resultsTable"></table>
+
+<script>
+  const exampleData = {
+    totalVotes: 2447749,
+    mandates: 15,
+    groups: [
+      {
+        name: "EEP",
+        parties: [
+          { name: "Liberal Alliance", percentage: 7.0 },
+          { name: "Konservative", percentage: 8.8 }
+        ]
+      },
+      {
+        name: "Grønne og S&D",
+        parties: [
+          { name: "Socialdemokratiet", percentage: 15.6 },
+          { name: "SF", percentage: 17.4 },
+          { name: "Alternativet", percentage: 2.7 }
+        ]
+      },
+      {
+        name: "Liberale",
+        parties: [
+          { name: "Moderaterne", percentage: 5.9 },
+          { name: "Radikale Venstre", percentage: 7.1 },
+          { name: "Venstre", percentage: 14.7 }
+        ]
+      },
+      { name: "Dansk Folkeparti", parties: [{ name: "Dansk Folkeparti", percentage: 6.4 }] },
+      { name: "Danmarksdemokraterne", parties: [{ name: "Danmarksdemokraterne", percentage: 7.4 }] },
+      { name: "Enhedslisten", parties: [{ name: "Enhedslisten", percentage: 7.0 }] }
+    ]
+  };
+
+  function addGroup(prefill = null) {
+    const groupDiv = document.createElement("div");
+    groupDiv.className = "group";
+    groupDiv.innerHTML = `
+      <label>Group Name: <input type="text" name="group_name" required></label>
+      <button type="button" onclick="addParty(this)">Add Party</button>
+      <button type="button" onclick="removeGroup(this)">Remove Group</button>
+      <div class="parties"></div>
+    `;
+    document.getElementById("groupsContainer").appendChild(groupDiv);
+
+    const nameInput = groupDiv.querySelector("input[name='group_name']");
+    if (prefill) {
+      nameInput.value = prefill.name;
+      prefill.parties.forEach(p => addParty(groupDiv.querySelector("button"), p));
+    }
+  }
+
+  function removeGroup(button) {
+    const groupDiv = button.closest(".group");
+    groupDiv.remove();
+  }
+
+  function addParty(button, prefill = null) {
+    const partyDiv = document.createElement("div");
+    partyDiv.className = "party";
+    partyDiv.innerHTML = `
+      <label>Party Name: <input type="text" name="party_name" required></label>
+      <label>Vote %: <input type="number" name="percentage" step="0.01" required></label>
+      <button type="button" onclick="removeParty(this)">Remove Party</button>
+    `;
+    const container = button.closest(".group").querySelector(".parties");
+    container.appendChild(partyDiv);
+
+    if (prefill) {
+      partyDiv.querySelector("input[name='party_name']").value = prefill.name;
+      partyDiv.querySelector("input[name='percentage']").value = prefill.percentage;
+    }
+  }
+
+  function removeParty(button) {
+    const partyDiv = button.closest(".party");
+    partyDiv.remove();
+  }
+
+  document.getElementById("inputForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const totalVotes = parseInt(document.getElementById("totalVotes").value);
+    const mandates = parseInt(document.getElementById("mandates").value);
+
+    const groups = [];
+    document.querySelectorAll(".group").forEach(groupEl => {
+      const groupName = groupEl.querySelector("input[name='group_name']").value;
+      const parties = [];
+      groupEl.querySelectorAll(".party").forEach(partyEl => {
+        const name = partyEl.querySelector("input[name='party_name']").value;
+        const percentage = parseFloat(partyEl.querySelector("input[name='percentage']").value);
+        parties.push({ name, percentage });
+      });
+      groups.push({ name: groupName, parties });
+    });
+
+    const res = await fetch("/calculate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ total_votes: totalVotes, mandates: mandates, groups: groups })
+    });
+
+    const data = await res.json();
+    updateChart(data);
+    updateTable(data);
+  });
+
+  function updateChart(data) {
+    const ctx = document.getElementById("chart").getContext("2d");
+    if (window.chart instanceof Chart) {
+      window.chart.destroy();
+    }
+
+    window.chart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: data.map(p => p.name),
+        datasets: [{
+          label: "Mandates",
+          data: data.map(p => p.mandates),
+          backgroundColor: "rgba(54, 162, 235, 0.6)",
+          borderColor: "rgba(54, 162, 235, 1)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        scales: { x: { beginAtZero: true, precision: 0 } }
+      }
+    });
+  }
+
+  function updateTable(data) {
+    const table = document.getElementById("resultsTable");
+    table.innerHTML = `
+      <tr><th>Party</th><th>Votes</th><th>Mandates</th></tr>
+      ${data.map(p => `<tr><td>${p.name}</td><td>${Math.round(p.votes)}</td><td>${p.mandates}</td></tr>`).join("")}
+    `;
+  }
+
+  window.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("totalVotes").value = exampleData.totalVotes;
+    document.getElementById("mandates").value = exampleData.mandates;
+    exampleData.groups.forEach(g => addGroup(g));
+  });
+</script>
+
+
+</body>
+</html>
